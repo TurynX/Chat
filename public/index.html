@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Real-time Chat</title>
+    <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
+  </head>
+  <body>
+    <h1>Real-time Chat</h1>
+    <input id="room" placeholder="Room name" />
+    <button onclick="joinRoom()">Join Room</button>
+    <input id="message" placeholder="Type your message..." />
+    <button onclick="send()">Send</button>
+    <h2 id="group">Chat Messages</h2>
+    <ul id="messages"></ul>
+
+    <script>
+      const loggedUser = localStorage.getItem("username");
+
+      const socket = io("http://localhost:3000");
+
+      socket.on("connect", () => {
+        console.log("Connected to server:", socket.id);
+      });
+
+      function joinRoom() {
+        const roomName = document.getElementById("room").value;
+        socket.emit("joinRoom", { roomName });
+        document.getElementById(
+          "group"
+        ).textContent = `Chat Messages ${roomName}`;
+      }
+
+      function send() {
+        const content = document.getElementById("message").value;
+        const roomName = document.getElementById("room").value;
+
+        socket.emit("message", { roomName, username: loggedUser, content });
+        document.getElementById("message").value = "";
+      }
+
+      socket.on("message", (msg) => {
+        const li = document.createElement("li");
+        li.textContent = `[${msg.roomName}] ${msg.username}: ${msg.content} (${msg.createdAt})`;
+        document.getElementById("messages").appendChild(li);
+      });
+
+      socket.on("system", (msg) => {
+        const li = document.createElement("li");
+        li.textContent = ` ${loggedUser} joined`;
+        li.style.color = "gray";
+        document.getElementById("messages").appendChild(li);
+      });
+    </script>
+  </body>
+</html>
