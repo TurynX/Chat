@@ -7,7 +7,7 @@
   </head>
   <body>
     <h1>Login</h1>
-    <form id="loginForm" method="POST">
+    <form id="loginForm">
       <label for="username">Username:</label>
       <input type="text" id="username" name="username" required /><br /><br />
       <label for="password">Password:</label>
@@ -19,13 +19,17 @@
       /><br /><br />
       <button type="submit">Login</button>
     </form>
+
+    <!-- Move script to end of body -->
     <script>
       document
         .getElementById("loginForm")
         .addEventListener("submit", async (e) => {
           e.preventDefault();
-          const username = document.getElementById("username").value;
-          const password = document.getElementById("password").value;
+
+          const formData = new FormData(e.target);
+          const username = formData.get("username");
+          const password = formData.get("password");
 
           const res = await fetch("/login", {
             method: "POST",
@@ -35,14 +39,13 @@
             body: JSON.stringify({ username, password }),
           });
 
-          if (!res.ok) {
+          if (res.ok) {
+            const data = await res.json();
+            localStorage.setItem("token", data.token);
+            window.location.href = "/index.html";
+          } else {
             alert("Login failed");
-            return;
           }
-
-          localStorage.setItem("username", username);
-
-          window.location.href = "/index.html";
         });
     </script>
   </body>

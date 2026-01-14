@@ -6,9 +6,9 @@
     "allowImportingTsExtensions": true,
     "noEmit": true,
     "types": ["node"],
-    "lib": ["esnext"],
+    "lib": ["esnext", "dom"],
     "strict": true,
-    "verbatimModuleSyntax": true,
+    "verbatimModuleSyntax": false,
     "skipLibCheck": true,
     "esModuleInterop": true
   }

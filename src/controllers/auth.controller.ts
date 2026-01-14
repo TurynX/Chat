@@ -1,55 +1,109 @@
 import type { FastifyRequest, FastifyReply } from "fastify";
-import { authSchema } from "../schemas/auth.schema";
+import { authSchema } from "../utils/auth.schema";
 import { loginService, registerService } from "../services/auth.service";
+import { generateToken } from "../utils/jwt";
+import {
+  InvalidCredentialsError,
+  UserExistsError,
+  UsernameNotFoundError,
+} from "../utils/error";
 
 export async function registerController(
   req: FastifyRequest,
   rep: FastifyReply
 ) {
-  const result = authSchema.safeParse(req.body);
+  try {
+    const result = authSchema.safeParse(req.body);
 
-  if (!result.success) {
-    return rep.status(400).type("text/html").send(`
-    <h1>Invalid request</h1>
-    <p>${result.error.issues[0].message}</p>
-    <a href="/login.html">Go back</a>
-  `);
+    if (!result.success) {
+      return rep.status(400).send({
+        success: false,
+        message: "Invalid request",
+        error: result.error.issues[0].message,
+      });
+    }
+
+    const { username, password } = result.data;
+
+    const user = await registerService(username, password);
+
+    return rep.status(201).send({
+      success: true,
+      message: "Registration successful",
+      username: user.username,
+    });
+  } catch (error) {
+    if (error instanceof UserExistsError) {
+      return rep.status(409).send({
+        success: false,
+        message: "User already exists",
+      });
+    }
+    if (error instanceof InvalidCredentialsError) {
+      return rep.status(401).send({
+        success: false,
+        message: "Invalid credentials",
+      });
+    }
+    if (error instanceof UsernameNotFoundError) {
+      return rep.status(404).send({
+        success: false,
+        message: "Username not found",
+      });
+    }
+    return rep.status(500).send({
+      success: false,
+      message: "Something went wrong",
+    });
   }
-
-  const { username, password } = result.data;
-
-  const user = await registerService(username, password);
-
-  if (!user) {
-    return rep.status(401).send({ message: "Invalid credentials" });
-  }
-
-  return rep.status(201).type("text/html").send(`
-    <h1>Registration successful</h1>
-    <p>User ${user.username} registered successfully.</p>
-    <a href="/login.html">Go to Login</a>
-  `);
 }
 
 export async function loginController(req: FastifyRequest, rep: FastifyReply) {
-  const result = authSchema.safeParse(req.body);
+  try {
+    const result = authSchema.safeParse(req.body);
 
-  if (!result.success) {
-    return rep
-      .status(400)
-      .send({ message: "Invalid request data", errors: result.error });
+    if (!result.success) {
+      return rep.status(400).send({
+        success: false,
+        message: "Invalid request",
+        error: result.error.issues[0].message,
+      });
+    }
+
+    const { username, password } = result.data;
+
+    const user = await loginService(username, password);
+
+    const token = generateToken(user);
+
+    return rep.status(200).send({
+      success: true,
+      message: "Login successful",
+      username: user.username,
+      token: token,
+    });
+  } catch (error) {
+    if (error instanceof InvalidCredentialsError) {
+      return rep.status(401).send({
+        success: false,
+        message: "Invalid credentials",
+      });
+    }
+    if (error instanceof InvalidCredentialsError) {
+      return rep.status(401).send({
+        success: false,
+        message: "Invalid credentials",
+      });
+    }
+    if (error instanceof UsernameNotFoundError) {
+      return rep.status(404).send({
+        success: false,
+        message: "Username not found",
+      });
+    }
+    return rep.status(500).send({
+      success: false,
+      message: "Something went wrong",
+    });
   }
-
-  const { username, password } = result.data;
-
-  const user = await loginService(username, password);
-  if (!user) {
-    return rep.status(401).send({ message: "Invalid credentials" });
-  }
-
-  return rep.status(200).type("text/html").send(`
-    <h1>Login successful</h1>
-    <p>Welcome back, ${user.username}!</p>
-    <a href="/index.html">Go to Chat</a>
-  `);
 }
